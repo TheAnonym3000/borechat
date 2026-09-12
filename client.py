@@ -27,6 +27,9 @@ win.geometry("1080x720")
 chat = tk.Text(win)
 chat.pack(fill="both", expand=True)
 
+chat.tag_config("self", foreground="#a438c7")
+chat.tag_config("other", foreground="#3c3c3c")
+
 entry = tk.Entry(win)
 entry.pack(fill="x")
 
@@ -77,10 +80,11 @@ def recv_messages():
                 if event.get("type") != "m.room.message":
                     continue
 
-                sender = event.get("sender")
+                name, server = event["sender"].split(":")
+                sender = name.replace("@", "") + f" @ {server}"
                 body = event.get("content", {}).get("body", "")
 
-                messages.append(f"{sender}: {body}")
+                messages.append(f"[{sender}] {body}")
                 dirty.set()
 
 def load_history(room_id):
@@ -98,9 +102,10 @@ def load_history(room_id):
     msgs = []
     for event in data.get("chunk", []):
         if event.get("type") == "m.room.message":
-            sender = event["sender"]
+            name, server = event["sender"].split(":")
+            sender = name.replace("@", "") + f" @ {server}"
             body = event["content"]["body"]
-            msgs.append(f"{sender}: {body}")
+            msgs.append(f"[{sender}] {body}")
 
             dirty.set()
 
@@ -156,7 +161,18 @@ entry.bind("<Return>", send)
 def render_chat():
     chat.config(state="normal")
     chat.delete("1.0", "end")
-    chat.insert("end", "\n".join(messages))
+    for msg in messages:
+        if msg.startswith("["):
+            sender, body = msg.split("]")
+            selfname = "[" + " @ ".join(USER.replace("@", "").split(":"))
+
+            tag = "self" if sender == selfname else "other"
+
+            chat.insert("end", sender + "]", tag)
+            chat.insert("end", body + "\n")
+        else:
+            chat.insert("end", msg + "\n")
+
     chat.see("end")
     chat.config(state="disabled")
 
