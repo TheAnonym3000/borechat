@@ -19,38 +19,8 @@ current_room = "#general"
 messages = []
 clients = []
 dirty = threading.Event()
-USER = input("Username (@user:example.org): ")
-PASSWORD = getpass("Password: ")
-HOMESERVER = USER.split(":")[1]
+login = threading.Event()
 sync_token = ""
-
-win = tk.Tk()
-win.title("Borechat")
-win.geometry("1080x720")
-
-chat = tk.Text(win)
-chat.pack(fill="both", expand=True)
-
-chat.tag_config("self", foreground="#a438c7")
-chat.tag_config("other", foreground="#3c3c3c")
-
-entry = tk.Entry(win)
-entry.pack(fill="x")
-
-r = requests.post(
-    f"https://{HOME_SERVER}/_matrix/client/v3/login",
-    json={
-        "type": "m.login.password",
-        "identifier": {
-            "type": "m.id.user",
-            "user": USER
-        },
-        "password": PASSWORD
-    }
-)
-
-data = r.json()
-token = data["access_token"]
 
 def recv_messages():
     global sync_token
@@ -106,9 +76,15 @@ def load_history(room_id):
     msgs = []
     for event in data.get("chunk", []):
         if event.get("type") == "m.room.message":
-            name, server = event["sender"].split(":")
+            content = event.get("content", {})
+            body = content.get("body")
+            # Redacted Matrix events may retain the message type while their
+            # content (including the body) has been removed.
+            if not isinstance(body, str):
+                continue
+
+            name, server = event["sender"].split(":", 1)
             sender = name.replace("@", "") + f" @ {server}"
-            body = event["content"]["body"]
             msgs.append(f"[{sender}] {body}")
 
             dirty.set()
@@ -166,23 +142,28 @@ def sendToRoom(msg):
     return r.json()
 
 
-def render_chat():
-    chat.config(state="normal")
-    chat.delete("1.0", "end")
+def render_chat(chat):
+    text = ""
     for msg in messages:
         if msg.startswith("["):
-            sender, body = msg.split("]")
-            selfname = "[" + " @ ".join(USER.replace("@", "").split(":"))
-
-            tag = "self" if sender == selfname else "other"
-
-            chat.insert("end", sender + "]", tag)
-            chat.insert("end", body + "\n")
+            sender, body = msg.split("]", 1)
+            text += sender + "]" + body + "\n"
         else:
-            chat.insert("end", msg + "\n")
+            text += msg + "\n"
+    chat.update(text)
 
-    chat.see("end")
-    chat.config(state="disabled")
+class LoginApp(App):
+    CSS = """
+    Screen {
+        align: center middle;
+    }
+    Button {
+        align: center middle;
+    }
+    Input {
+        align: center middle;
+    }
+    """
 
     def __init__(self):
         super().__init__()
