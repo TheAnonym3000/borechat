@@ -168,7 +168,7 @@ class LoginApp(App):
     def __init__(self):
         super().__init__()
         self.input = Input(placeholder="@user:example.org")
-        self.password_input = Input(password=True)
+        self.password_input = Input(password=True, placeholder="Password")
         self.login_button = Button("Login")
     
     def compose(self) -> ComposeResult:
