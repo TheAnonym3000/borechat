@@ -1,5 +1,5 @@
 # borechat
-GUI chat app originally using the bore.pub service, now using the better protocol Matrix.
+TUI chat app originally using the bore.pub service, now using the better protocol Matrix.
 
 ## Dependencies
 - Python3
